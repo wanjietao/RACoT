@@ -1,1 +1,273 @@
-# RA-CoT: Retrieval-Augmented Chain-of-Thought for Scalable and Explainable Industrial Recommendation\n\n本项目实现了论文《Beyond End-to-End: A Low-Latency, Retrieval-Augmented Chain-of-Thought for Scalable and Explainable Industrial Recommendation》中提出的RA-CoT推荐系统框架。\n\n## 项目概述\n\nRA-CoT是一个创新的推荐系统框架，它巧妙地结合了传统推荐模型的高效性和大型语言模型（LLM）的推理能力。该框架通过双路径并行架构，在保持毫秒级响应时间的同时，为推荐结果提供高质量的可解释性说明。\n\n### 核心特性\n\n- **双路径并行架构**：传统推荐模型作为主干，LLM作为推理协处理器\n- **三维推理框架**：偏好分析、兴趣演化、转化归因\n- **检索增强机制**：智能缓存和复用推理结果，控制延迟\n- **残差融合网络**：门控注意力机制融合异构特征\n- **工业级性能**：毫秒级响应时间，支持大规模部署\n\n## 项目结构\n\n```\nra_cot_project/\n├── src/                          # 源代码目录\n│   ├── data_processor.py         # 数据处理模块\n│   ├── traditional_models.py     # 传统推荐模型（DIEN、BST等）\n│   ├── llm_reasoning.py          # LLM推理引擎\n│   ├── fusion_network.py         # 门控注意力残差融合网络\n│   └── ra_cot_model.py          # RA-CoT主模型\n├── config/                       # 配置文件\n│   └── config.py                # 主配置文件\n├── data/                        # 数据目录\n├── models/                      # 模型保存目录\n├── logs/                        # 日志目录\n├── tests/                       # 测试文件\n├── notebooks/                   # Jupyter笔记本\n├── docs/                        # 文档目录\n├── train.py                     # 训练脚本\n├── serve.py                     # 推理服务API\n├── requirements.txt             # 依赖包列表\n└── README.md                    # 项目说明\n```\n\n## 安装和配置\n\n### 1. 环境要求\n\n- Python 3.8+\n- PyTorch 2.0+\n- CUDA（可选，用于GPU加速）\n\n### 2. 安装依赖\n\n```bash\ncd ra_cot_project\npip install -r requirements.txt\n```\n\n### 3. 环境变量配置\n\n创建`.env`文件并配置以下环境变量：\n\n```bash\n# OpenAI API配置\nOPENAI_API_KEY=your_openai_api_key\n\n# Redis配置（可选）\nREDIS_HOST=localhost\nREDIS_PORT=6379\nREDIS_DB=0\n\n# CUDA配置（可选）\nCUDA_AVAILABLE=true\n```\n\n## 使用方法\n\n### 1. 数据准备\n\n准备CSV格式的训练数据，包含以下字段：\n- `user_id`: 用户ID\n- `item_id`: 物品ID\n- `category`: 物品类别\n- `user_sequence`: 用户历史行为序列（格式：\"item1:cat1:action1,item2:cat2:action2,...\"）\n- `label`: 标签（0或1）\n\n### 2. 模型训练\n\n```bash\npython train.py --data_path ./data/train.csv --epochs 10 --batch_size 256\n```\n\n训练参数说明：\n- `--data_path`: 训练数据路径\n- `--epochs`: 训练轮数\n- `--batch_size`: 批次大小\n- `--device`: 设备（cpu/cuda）\n- `--model_save_path`: 模型保存路径\n\n### 3. 启动推理服务\n\n```bash\npython serve.py\n```\n\n服务将在`http://localhost:8000`启动，提供以下API端点：\n\n- `GET /health`: 健康检查\n- `POST /recommend`: 获取推荐结果\n- `POST /explain`: 获取推荐解释\n- `GET /stats`: 获取性能统计\n- `POST /reset_stats`: 重置性能统计\n\n### 4. API使用示例\n\n```python\nimport requests\n\n# 推荐请求\nrequest_data = {\n    \"user_id\": \"user_123\",\n    \"user_history\": [\n        {\"item_id\": \"item_1\", \"category\": \"electronics\", \"action\": \"click\"},\n        {\"item_id\": \"item_2\", \"category\": \"electronics\", \"action\": \"purchase\"}\n    ],\n    \"candidate_items\": [\n        {\"item_id\": \"item_3\", \"category\": \"electronics\"},\n        {\"item_id\": \"item_4\", \"category\": \"books\"}\n    ],\n    \"top_k\": 5,\n    \"explain\": True\n}\n\nresponse = requests.post(\"http://localhost:8000/recommend\", json=request_data)\nresult = response.json()\n\nprint(\"推荐结果:\", result[\"recommendations\"])\nprint(\"解释:\", result[\"explanations\"])\n```\n\n## 核心组件详解\n\n### 1. 传统推荐模型\n\n支持多种经典推荐模型：\n- **DIEN**: 深度兴趣演化网络\n- **BST**: 行为序列Transformer\n\n### 2. LLM推理引擎\n\n- **三维推理**: 偏好分析、兴趣演化、转化归因\n- **智能缓存**: Redis/内存缓存机制\n- **提示工程**: 精心设计的CoT提示模板\n\n### 3. 融合网络\n\n- **自适应门控**: 动态调节推理信号贡献\n- **上下文注意力**: 上下文感知的特征融合\n- **残差补偿**: 传统预测的动态补偿机制\n\n## 性能特点\n\n### 准确性提升\n- CTR预测AUC提升3-5%\n- CVR预测AUC提升2-4%\n- 相比传统模型显著改善\n\n### 延迟控制\n- 平均响应时间：<50ms\n- 缓存命中率：>80%\n- LLM推理时间：<200ms\n\n### 可解释性\n- 自然语言解释质量高\n- 三维推理覆盖完整决策过程\n- 用户信任度显著提升\n\n## 配置说明\n\n主要配置参数（`config/config.py`）：\n\n```python\n# 模型配置\nTRADITIONAL_MODEL_TYPE = \"dien\"  # 传统模型类型\nLLM_MODEL_NAME = \"gpt-4.1-mini\"  # LLM模型名称\nEMBEDDING_DIM = 128              # 嵌入维度\nHIDDEN_DIM = 256                 # 隐藏层维度\n\n# 推理配置\nMAX_SEQUENCE_LENGTH = 50         # 最大序列长度\nRETRIEVAL_TOP_K = 5             # 检索top-k\nCACHE_TTL = 3600                # 缓存过期时间\n\n# 训练配置\nBATCH_SIZE = 256                # 批次大小\nLEARNING_RATE = 0.001           # 学习率\nEPOCHS = 10                     # 训练轮数\n```\n\n## 扩展和定制\n\n### 1. 添加新的传统模型\n\n在`traditional_models.py`中实现新模型类，并在`TraditionalModelFactory`中注册。\n\n### 2. 自定义推理维度\n\n修改`llm_reasoning.py`中的`CoTPromptTemplate`，添加新的推理维度。\n\n### 3. 优化融合策略\n\n在`fusion_network.py`中调整门控机制和注意力计算方式。\n\n## 监控和调试\n\n### 1. 日志系统\n\n- 训练日志：`./logs/training.log`\n- 服务日志：`./logs/service.log`\n- 支持多级别日志记录\n\n### 2. 性能监控\n\n```python\n# 获取性能统计\nstats = model.get_performance_stats()\nprint(f\"缓存命中率: {stats['cache_hit_rate']:.2%}\")\nprint(f\"平均推理时间: {stats['avg_total_inference_time_ms']:.2f}ms\")\n```\n\n### 3. 模型解释\n\n```python\n# 获取推荐解释\nexplanations = model.get_explanations(batch)\nfor exp in explanations:\n    print(f\"用户: {exp['user_id']}\")\n    print(f\"偏好分析: {exp['explanation']['preference']}\")\n    print(f\"兴趣演化: {exp['explanation']['evolution']}\")\n    print(f\"转化归因: {exp['explanation']['attribution']}\")\n```\n\n## 贡献指南\n\n1. Fork本项目\n2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)\n3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)\n4. 推送到分支 (`git push origin feature/AmazingFeature`)\n5. 开启Pull Request\n\n## 许可证\n\n本项目采用MIT许可证 - 查看[LICENSE](LICENSE)文件了解详情。\n\n## 引用\n\n如果您在研究中使用了本项目，请引用原论文：\n\n```bibtex\n@inproceedings{racot2026,\n  title={Beyond End-to-End: A Low-Latency, Retrieval-Augmented Chain-of-Thought for Scalable and Explainable Industrial Recommendation},\n  author={Author Names},\n  booktitle={Proceedings of the Web Conference 2026},\n  year={2026}\n}\n```\n\n## 联系方式\n\n如有问题或建议，请通过以下方式联系：\n- 提交Issue\n- 发送邮件至：[your-email@example.com]\n\n---\n\n**注意**: 本项目仅供学术研究和教育目的使用。在生产环境中部署前，请确保充分测试和优化。"
+# RA-CoT: Retrieval-Augmented Chain-of-Thought for Scalable and Explainable Industrial Recommendation
+
+This project implements the RA-CoT recommendation system framework proposed in the paper "Beyond End-to-End: A Low-Latency, Retrieval-Augmented Chain-of-Thought for Scalable and Explainable Industrial Recommendation".
+
+## Overview
+
+RA-CoT is an innovative recommendation system framework that cleverly combines the efficiency of traditional recommendation models with the reasoning capabilities of Large Language Models (LLMs). The framework uses a dual-pathway parallel architecture to provide high-quality explainable recommendations while maintaining millisecond-level response times.
+
+### Key Features
+
+- **Dual-pathway Parallel Architecture**: Traditional recommendation models as backbone, LLM as reasoning co-processor
+- **Tri-dimensional Reasoning Framework**: Preference analysis, interest evolution, conversion attribution
+- **Retrieval-Augmented Mechanism**: Intelligent caching and reuse of reasoning results to control latency
+- **Residual Fusion Network**: Gated attention mechanism for heterogeneous feature fusion
+- **Industrial-grade Performance**: Millisecond-level response time, supporting large-scale deployment
+
+## Project Structure
+
+```
+ra_cot_project/
+├── src/                          # Source code directory
+│   ├── data_processor.py         # Data processing module
+│   ├── traditional_models.py     # Traditional recommendation models (DIEN, BST, etc.)
+│   ├── llm_reasoning.py          # LLM reasoning engine
+│   ├── fusion_network.py         # Gated attention residual fusion network
+│   └── ra_cot_model.py          # RA-CoT main model
+├── config/                       # Configuration files
+│   └── config.py                # Main configuration file
+├── data/                        # Data directory
+├── models/                      # Model save directory
+├── logs/                        # Log directory
+├── tests/                       # Test files
+├── notebooks/                   # Jupyter notebooks
+├── docs/                        # Documentation directory
+├── train.py                     # Training script
+├── serve.py                     # Inference service API
+├── requirements.txt             # Dependency list
+└── README.md                    # Project documentation
+```
+
+## Installation and Configuration
+
+### 1. Environment Requirements
+
+- Python 3.8+
+- PyTorch 2.0+
+- CUDA (optional, for GPU acceleration)
+
+### 2. Install Dependencies
+
+```bash
+cd ra_cot_project
+pip install -r requirements.txt
+```
+
+### 3. Environment Variables Configuration
+
+Create a `.env` file and configure the following environment variables:
+
+```bash
+# OpenAI API Configuration
+OPENAI_API_KEY=your_openai_api_key
+
+# Redis Configuration (optional)
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_DB=0
+
+# CUDA Configuration (optional)
+CUDA_AVAILABLE=true
+```
+
+## Usage
+
+### 1. Data Preparation
+
+Prepare training data in CSV format with the following fields:
+- `user_id`: User ID
+- `item_id`: Item ID
+- `category`: Item category
+- `user_sequence`: User historical behavior sequence (format: "item1:cat1:action1,item2:cat2:action2,...")
+- `label`: Label (0 or 1)
+
+### 2. Model Training
+
+```bash
+python train.py --data_path ./data/train.csv --epochs 10 --batch_size 256
+```
+
+Training parameters:
+- `--data_path`: Training data path
+- `--epochs`: Number of training epochs
+- `--batch_size`: Batch size
+- `--device`: Device (cpu/cuda)
+- `--model_save_path`: Model save path
+
+### 3. Start Inference Service
+
+```bash
+python serve.py
+```
+
+The service will start at `http://localhost:8000` with the following API endpoints:
+
+- `GET /health`: Health check
+- `POST /recommend`: Get recommendation results
+- `POST /explain`: Get recommendation explanations
+- `GET /stats`: Get performance statistics
+- `POST /reset_stats`: Reset performance statistics
+
+### 4. API Usage Example
+
+```python
+import requests
+
+# Recommendation request
+request_data = {
+    "user_id": "user_123",
+    "user_history": [
+        {"item_id": "item_1", "category": "electronics", "action": "click"},
+        {"item_id": "item_2", "category": "electronics", "action": "purchase"}
+    ],
+    "candidate_items": [
+        {"item_id": "item_3", "category": "electronics"},
+        {"item_id": "item_4", "category": "books"}
+    ],
+    "top_k": 5,
+    "explain": True
+}
+
+response = requests.post("http://localhost:8000/recommend", json=request_data)
+result = response.json()
+
+print("Recommendations:", result["recommendations"])
+print("Explanations:", result["explanations"])
+```
+
+## Core Components
+
+### 1. Traditional Recommendation Models
+
+Supports multiple classic recommendation models:
+- **DIEN**: Deep Interest Evolution Network
+- **BST**: Behavior Sequence Transformer
+
+### 2. LLM Reasoning Engine
+
+- **Tri-dimensional Reasoning**: Preference analysis, interest evolution, conversion attribution
+- **Intelligent Caching**: Redis/memory caching mechanism
+- **Prompt Engineering**: Carefully designed CoT prompt templates
+
+### 3. Fusion Network
+
+- **Adaptive Gating**: Dynamic adjustment of reasoning signal contribution
+- **Context Attention**: Context-aware feature fusion
+- **Residual Compensation**: Dynamic compensation mechanism for traditional predictions
+
+## Performance Characteristics
+
+### Accuracy Improvement
+- CTR prediction AUC improvement: 3-5%
+- CVR prediction AUC improvement: 2-4%
+- Significant improvement over traditional models
+
+### Latency Control
+- Average response time: <50ms
+- Cache hit rate: >80%
+- LLM inference time: <200ms
+
+### Explainability
+- High-quality natural language explanations
+- Tri-dimensional reasoning covers complete decision process
+- Significant improvement in user trust
+
+## Configuration
+
+Main configuration parameters (`config/config.py`):
+
+```python
+# Model Configuration
+TRADITIONAL_MODEL_TYPE = "dien"  # Traditional model type
+LLM_MODEL_NAME = "gpt-4.1-mini"  # LLM model name
+EMBEDDING_DIM = 128              # Embedding dimension
+HIDDEN_DIM = 256                 # Hidden layer dimension
+
+# Reasoning Configuration
+MAX_SEQUENCE_LENGTH = 50         # Maximum sequence length
+RETRIEVAL_TOP_K = 5             # Retrieval top-k
+CACHE_TTL = 3600                # Cache expiration time
+
+# Training Configuration
+BATCH_SIZE = 256                # Batch size
+LEARNING_RATE = 0.001           # Learning rate
+EPOCHS = 10                     # Training epochs
+```
+
+## Extension and Customization
+
+### 1. Adding New Traditional Models
+
+Implement new model classes in `traditional_models.py` and register them in `TraditionalModelFactory`.
+
+### 2. Custom Reasoning Dimensions
+
+Modify `CoTPromptTemplate` in `llm_reasoning.py` to add new reasoning dimensions.
+
+### 3. Optimize Fusion Strategy
+
+Adjust gating mechanisms and attention computation in `fusion_network.py`.
+
+## Monitoring and Debugging
+
+### 1. Logging System
+
+- Training logs: `./logs/training.log`
+- Service logs: `./logs/service.log`
+- Multi-level logging support
+
+### 2. Performance Monitoring
+
+```python
+# Get performance statistics
+stats = model.get_performance_stats()
+print(f"Cache hit rate: {stats['cache_hit_rate']:.2%}")
+print(f"Average inference time: {stats['avg_total_inference_time_ms']:.2f}ms")
+```
+
+### 3. Model Explanation
+
+```python
+# Get recommendation explanations
+explanations = model.get_explanations(batch)
+for exp in explanations:
+    print(f"User: {exp['user_id']}")
+    print(f"Preference analysis: {exp['explanation']['preference']}")
+    print(f"Interest evolution: {exp['explanation']['evolution']}")
+    print(f"Conversion attribution: {exp['explanation']['attribution']}")
+```
+
+## Contributing
+
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Citation
+
+If you use this project in your research, please cite the original paper:
+
+```bibtex
+@inproceedings{racot2026,
+  title={Beyond End-to-End: A Low-Latency, Retrieval-Augmented Chain-of-Thought for Scalable and Explainable Industrial Recommendation},
+  author={Author Names},
+  booktitle={Proceedings of the Web Conference 2026},
+  year={2026}
+}
+```
+
+## Contact
+
+For questions or suggestions, please contact us through:
+- Submit an Issue
+- Send email to: [wanjietao@gmail.com]
+
+---
+
+**Note**: This project is for academic research and educational purposes only. Please ensure thorough testing and optimization before deploying in production environments.
