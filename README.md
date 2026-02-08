@@ -256,8 +256,8 @@ If you use this project in your research, please cite the original paper:
 ```bibtex
 @inproceedings{racot2026,
   title={Beyond End-to-End: A Low-Latency, Retrieval-Augmented Chain-of-Thought for Scalable and Explainable Industrial Recommendation},
-  author={Author Names},
-  booktitle={Proceedings of the Web Conference 2026},
+  author={Wanjie Tao},
+  booktitle={},
   year={2026}
 }
 ```
